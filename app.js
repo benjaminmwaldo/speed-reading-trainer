@@ -7,7 +7,7 @@
 
   // ========== FIREBASE CONFIG ==========
   const firebaseConfig = {
-    apiKey: "AIzaSyDWU1KzQxERUR7lgVGVThxFkpyWwf9geA",
+    apiKey: "AIzaSyDWU1KzQxERUR7lgVGVThxFkpyWwxf9geA",
     authDomain: "speed-reading-trainer-1e4dc.firebaseapp.com",
     projectId: "speed-reading-trainer-1e4dc",
     storageBucket: "speed-reading-trainer-1e4dc.firebasestorage.app",
