@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speed Reading Trainer</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Top Navigation -->
+<nav class="top-nav">
+  <div class="nav-brand">Speed Reader</div>
+  <div class="nav-links">
+    <a href="#dashboard" class="nav-link active" data-route="dashboard">Dashboard</a>
+    <a href="#test-setup" class="nav-link" data-route="test">Test</a>
+    <a href="#exercises" class="nav-link" data-route="exercises">Exercises</a>
+    <a href="#progress" class="nav-link" data-route="progress">Progress</a>
+  </div>
+  <div class="auth-area" id="auth-area"></div>
+</nav>
+
+<div class="container">
+
+  <!-- ========== DASHBOARD ========== -->
+  <section id="screen-dashboard" class="screen">
+    <div class="dashboard-hero">
+      <div class="hero-wpm">
+        <div class="hero-wpm-number" id="dash-current-wpm">--</div>
+        <div class="hero-wpm-label">WPM <span id="dash-trend" class="trend-arrow"></span></div>
+      </div>
+    </div>
+    <div class="stats-row" id="dash-stats-row">
+      <div class="stat">
+        <div class="stat-num" id="dash-sessions">0</div>
+        <div class="stat-label">Sessions</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="dash-avg-wpm">--</div>
+        <div class="stat-label">Avg WPM</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="dash-best-wpm">--</div>
+        <div class="stat-label">Best WPM</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="dash-comprehension">--%</div>
+        <div class="stat-label">Comprehension</div>
+      </div>
+    </div>
+    <div class="dash-chart-wrap">
+      <canvas id="dash-chart"></canvas>
+    </div>
+    <div class="dash-actions">
+      <button class="btn btn-primary btn-lg" onclick="navigateTo('test-setup')">Start Reading Test</button>
+      <button class="btn btn-secondary btn-lg" onclick="navigateTo('exercises')">Training Exercises</button>
+    </div>
+    <div class="recent-sessions">
+      <h3>Recent Sessions</h3>
+      <div id="dash-recent-list" class="recent-list"></div>
+    </div>
+  </section>
+
+  <!-- ========== TEST SETUP ========== -->
+  <section id="screen-test-setup" class="screen" style="display:none">
+    <h2 class="section-title">Choose a Text</h2>
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label class="filter-label">Length</label>
+        <div class="filter-pills" id="filter-length">
+          <button class="pill active" data-value="all">All</button>
+          <button class="pill" data-value="short">Short</button>
+          <button class="pill" data-value="medium">Medium</button>
+          <button class="pill" data-value="long">Long</button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Difficulty</label>
+        <div class="filter-pills" id="filter-difficulty">
+          <button class="pill active" data-value="all">All</button>
+          <button class="pill" data-value="easy">Easy</button>
+          <button class="pill" data-value="medium">Medium</button>
+          <button class="pill" data-value="hard">Hard</button>
+        </div>
+      </div>
+      <button class="btn btn-accent" id="btn-random-text">Random Text</button>
+    </div>
+    <div class="text-grid" id="text-grid"></div>
+  </section>
+
+  <!-- ========== TEST ACTIVE ========== -->
+  <section id="screen-test-active" class="screen" style="display:none">
+    <div class="test-header">
+      <div class="test-info">
+        <span id="test-title" class="test-title-label"></span>
+        <span id="test-author" class="test-author-label"></span>
+      </div>
+      <div class="test-timer-bar">
+        <span class="timer-item"><span class="timer-label">Time</span> <span id="test-timer">0:00</span></span>
+        <span class="timer-item"><span class="timer-label">WPM</span> <span id="test-live-wpm">--</span></span>
+        <span class="timer-item"><span class="timer-label">Words</span> <span id="test-word-count">0</span></span>
+      </div>
+    </div>
+    <div class="test-reading-area" id="test-reading-area"></div>
+    <div class="test-controls">
+      <button class="btn btn-primary btn-lg" id="btn-done-reading">Done Reading</button>
+    </div>
+  </section>
+
+  <!-- ========== TEST QUESTIONS ========== -->
+  <section id="screen-test-questions" class="screen" style="display:none">
+    <h2 class="section-title">Comprehension Check</h2>
+    <div class="question-progress" id="question-progress"></div>
+    <div class="question-card" id="question-card"></div>
+  </section>
+
+  <!-- ========== TEST RESULTS ========== -->
+  <section id="screen-test-results" class="screen" style="display:none">
+    <h2 class="section-title">Your Results</h2>
+    <div class="results-grid">
+      <div class="result-card result-wpm">
+        <div class="result-value" id="result-wpm">0</div>
+        <div class="result-label">Words Per Minute</div>
+      </div>
+      <div class="result-card result-comp">
+        <div class="result-value" id="result-comprehension">0%</div>
+        <div class="result-label">Comprehension</div>
+      </div>
+      <div class="result-card result-adjusted">
+        <div class="result-value" id="result-adjusted">0</div>
+        <div class="result-label">Adjusted WPM</div>
+      </div>
+      <div class="result-card result-time">
+        <div class="result-value" id="result-time">0:00</div>
+        <div class="result-label">Reading Time</div>
+      </div>
+    </div>
+    <div class="result-context" id="result-context"></div>
+    <div class="result-actions">
+      <button class="btn btn-primary" onclick="navigateTo('test-setup')">Test Again</button>
+      <button class="btn btn-secondary" onclick="navigateTo('dashboard')">Dashboard</button>
+    </div>
+  </section>
+
+  <!-- ========== EXERCISES MENU ========== -->
+  <section id="screen-exercises" class="screen" style="display:none">
+    <h2 class="section-title">Training Exercises</h2>
+    <div class="exercise-grid">
+      <div class="exercise-card" onclick="navigateTo('exercise-rsvp')">
+        <div class="exercise-icon">&#9889;</div>
+        <h3>RSVP Trainer</h3>
+        <p>Words flash one at a time at increasing speed. Build raw reading velocity.</p>
+      </div>
+      <div class="exercise-card" onclick="navigateTo('exercise-chunking')">
+        <div class="exercise-icon">&#128220;</div>
+        <h3>Chunking Trainer</h3>
+        <p>Identify briefly flashed word groups. Improve phrase recognition speed.</p>
+      </div>
+      <div class="exercise-card" onclick="navigateTo('exercise-eyespan')">
+        <div class="exercise-icon">&#128065;</div>
+        <h3>Eye Span Widener</h3>
+        <p>Identify peripheral words to widen your visual intake per fixation.</p>
+      </div>
+      <div class="exercise-card" onclick="navigateTo('exercise-pacer')">
+        <div class="exercise-icon">&#9654;</div>
+        <h3>Pacer Reading</h3>
+        <p>Read along with a moving highlight bar at your target WPM pace.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== RSVP EXERCISE ========== -->
+  <section id="screen-exercise-rsvp" class="screen" style="display:none">
+    <div class="exercise-header">
+      <button class="btn btn-ghost" onclick="navigateTo('exercises')">&larr; Exercises</button>
+      <h2>RSVP Trainer</h2>
+    </div>
+    <div class="rsvp-setup" id="rsvp-setup">
+      <div class="form-group">
+        <label class="form-label">Starting WPM</label>
+        <input type="range" id="rsvp-wpm" min="100" max="800" value="250" step="25" class="range-input">
+        <span id="rsvp-wpm-display" class="range-value">250 WPM</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Text</label>
+        <select id="rsvp-text-select" class="form-select"></select>
+      </div>
+      <label class="checkbox-label">
+        <input type="checkbox" id="rsvp-accelerate" checked> Auto-accelerate (+25 WPM every 30s)
+      </label>
+      <button class="btn btn-primary btn-lg" id="btn-start-rsvp">Start RSVP</button>
+    </div>
+    <div class="rsvp-display" id="rsvp-display" style="display:none">
+      <div class="rsvp-speed-indicator" id="rsvp-speed-indicator">250 WPM</div>
+      <div class="rsvp-word-container">
+        <div class="rsvp-word" id="rsvp-word"></div>
+      </div>
+      <div class="rsvp-progress-bar"><div class="rsvp-progress-fill" id="rsvp-progress-fill"></div></div>
+      <div class="rsvp-controls">
+        <button class="btn btn-secondary" id="btn-rsvp-pause">Pause</button>
+        <button class="btn btn-danger" id="btn-rsvp-stop">Stop</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== CHUNKING EXERCISE ========== -->
+  <section id="screen-exercise-chunking" class="screen" style="display:none">
+    <div class="exercise-header">
+      <button class="btn btn-ghost" onclick="navigateTo('exercises')">&larr; Exercises</button>
+      <h2>Chunking Trainer</h2>
+    </div>
+    <div class="chunking-setup" id="chunking-setup">
+      <p class="exercise-desc">Word groups will flash briefly. Pick what you saw from the options.</p>
+      <button class="btn btn-primary btn-lg" id="btn-start-chunking">Start Training</button>
+    </div>
+    <div class="chunking-display" id="chunking-display" style="display:none">
+      <div class="chunking-stats">
+        <span>Score: <strong id="chunking-score">0</strong></span>
+        <span>Streak: <strong id="chunking-streak">0</strong></span>
+        <span>Chunk Size: <strong id="chunking-size">2</strong></span>
+      </div>
+      <div class="chunking-flash-area" id="chunking-flash-area">
+        <div class="chunking-word" id="chunking-word">Ready...</div>
+      </div>
+      <div class="chunking-options" id="chunking-options"></div>
+      <button class="btn btn-danger" id="btn-chunking-stop" style="margin-top:20px">Stop</button>
+    </div>
+  </section>
+
+  <!-- ========== EYE SPAN EXERCISE ========== -->
+  <section id="screen-exercise-eyespan" class="screen" style="display:none">
+    <div class="exercise-header">
+      <button class="btn btn-ghost" onclick="navigateTo('exercises')">&larr; Exercises</button>
+      <h2>Eye Span Widener</h2>
+    </div>
+    <div class="eyespan-setup" id="eyespan-setup">
+      <p class="exercise-desc">A row of words flashes with a center fixation point. Identify the highlighted peripheral word.</p>
+      <button class="btn btn-primary btn-lg" id="btn-start-eyespan">Start Training</button>
+    </div>
+    <div class="eyespan-display" id="eyespan-display" style="display:none">
+      <div class="eyespan-stats">
+        <span>Score: <strong id="eyespan-score">0</strong></span>
+        <span>Span: <strong id="eyespan-span">3</strong> words</span>
+        <span>Accuracy: <strong id="eyespan-accuracy">0%</strong></span>
+      </div>
+      <div class="eyespan-flash-area" id="eyespan-flash-area">
+        <div class="eyespan-cross">+</div>
+      </div>
+      <div class="eyespan-options" id="eyespan-options"></div>
+      <button class="btn btn-danger" id="btn-eyespan-stop" style="margin-top:20px">Stop</button>
+    </div>
+  </section>
+
+  <!-- ========== PACER EXERCISE ========== -->
+  <section id="screen-exercise-pacer" class="screen" style="display:none">
+    <div class="exercise-header">
+      <button class="btn btn-ghost" onclick="navigateTo('exercises')">&larr; Exercises</button>
+      <h2>Pacer Reading</h2>
+    </div>
+    <div class="pacer-setup" id="pacer-setup">
+      <div class="form-group">
+        <label class="form-label">Target WPM</label>
+        <input type="range" id="pacer-wpm" min="100" max="800" value="300" step="25" class="range-input">
+        <span id="pacer-wpm-display" class="range-value">300 WPM</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Text</label>
+        <select id="pacer-text-select" class="form-select"></select>
+      </div>
+      <button class="btn btn-primary btn-lg" id="btn-start-pacer">Start Pacer</button>
+    </div>
+    <div class="pacer-display" id="pacer-display" style="display:none">
+      <div class="pacer-speed-controls">
+        <button class="btn btn-ghost" id="btn-pacer-slower">-25</button>
+        <span id="pacer-current-wpm">300 WPM</span>
+        <button class="btn btn-ghost" id="btn-pacer-faster">+25</button>
+      </div>
+      <div class="pacer-reading-area" id="pacer-reading-area"></div>
+      <div class="pacer-controls">
+        <button class="btn btn-secondary" id="btn-pacer-pause">Pause</button>
+        <button class="btn btn-danger" id="btn-pacer-stop">Stop</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== PROGRESS ========== -->
+  <section id="screen-progress" class="screen" style="display:none">
+    <h2 class="section-title">Progress Tracking</h2>
+    <div class="progress-summary" id="progress-summary">
+      <div class="stat">
+        <div class="stat-num" id="prog-best-wpm">--</div>
+        <div class="stat-label">Best WPM</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="prog-avg-wpm">--</div>
+        <div class="stat-label">Avg WPM</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="prog-total-sessions">0</div>
+        <div class="stat-label">Sessions</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="prog-streak">0</div>
+        <div class="stat-label">Day Streak</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="prog-words-read">0</div>
+        <div class="stat-label">Words Read</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="prog-time-spent">0m</div>
+        <div class="stat-label">Time Spent</div>
+      </div>
+    </div>
+    <div class="progress-chart-wrap">
+      <div class="chart-range-buttons">
+        <button class="pill active" data-range="30">30 Days</button>
+        <button class="pill" data-range="60">60 Days</button>
+        <button class="pill" data-range="90">90 Days</button>
+      </div>
+      <canvas id="progress-chart"></canvas>
+    </div>
+    <div class="session-history">
+      <h3>Session History</h3>
+      <div class="history-table-wrap">
+        <table class="history-table" id="history-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Date</th>
+              <th>WPM</th>
+              <th>Comprehension</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Data Migration Modal -->
+<div class="modal-overlay" id="modal-overlay" style="display:none">
+  <div class="modal" id="modal"></div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+
+<script src="texts.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
