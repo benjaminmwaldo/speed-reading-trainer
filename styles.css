@@ -525,6 +525,102 @@ body {
 .pacer-reading-area .pacer-line.active { background: var(--accent-glow); color: #fff; }
 .pacer-controls { display: flex; gap: 12px; justify-content: center; }
 
+/* ===== FLUENCY BUILDER ===== */
+.fluency-setup {
+  max-width: 420px;
+  margin: 0 auto;
+}
+.fluency-round-indicator {
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 12px;
+  letter-spacing: 0.02em;
+}
+.fluency-stats {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+.fluency-stats strong { color: var(--accent); }
+.fluency-reading-area {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 32px;
+  font-size: 1.1rem;
+  line-height: 2;
+  max-height: 52vh;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  position: relative;
+}
+.fluency-reading-area .pacer-line { transition: background 0.15s; padding: 2px 4px; border-radius: 4px; }
+.fluency-reading-area .pacer-line.active { background: var(--accent-glow); color: #fff; }
+.fluency-controls { display: flex; gap: 12px; justify-content: center; }
+.fluency-pacer-controls { display: flex; gap: 12px; justify-content: center; }
+.fluency-summary-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  max-width: 540px;
+  margin: 0 auto;
+}
+.fluency-round-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 12px;
+  text-align: center;
+}
+.fluency-round-card .round-label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.fluency-round-card .round-wpm { font-size: 1.8rem; font-weight: 800; color: var(--accent); }
+.fluency-round-card .round-target { font-size: 0.78rem; color: var(--text-dim); margin-top: 4px; }
+
+/* ===== REGRESSION BUSTER ===== */
+.regression-setup {
+  max-width: 420px;
+  margin: 0 auto;
+}
+.regression-speed-label {
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+.regression-reading-area {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 32px;
+  font-size: 1.1rem;
+  line-height: 2;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.regression-line {
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background 0.15s;
+  display: block;
+  min-height: 1.6em;
+}
+.regression-line.active { background: var(--accent-glow); color: #fff; }
+.masked-line {
+  display: inline-block;
+  background: var(--surface2);
+  color: var(--surface2);
+  border-radius: 3px;
+  letter-spacing: 0.1em;
+  user-select: none;
+  padding: 0 2px;
+}
+
 /* ===== PROGRESS ===== */
 .progress-summary {
   display: flex;

@@ -40,6 +40,8 @@
   let chunkingState = { timeout: null, active: false, score: 0, streak: 0, consecutiveCorrect: 0, chunkSize: 2, displayTime: 800, words: [], usedChunks: [] };
   let eyespanState = { timeout: null, active: false, score: 0, total: 0, consecutiveCorrect: 0, span: 3, displayTime: 600, words: [] };
   let pacerState = { interval: null, paused: false, wpm: 300, lineIndex: 0, lines: [] };
+  let fluencyState = { round: 0, baseWpm: 0, targetWpm: 0, text: null, startTime: null, timerInterval: null, lines: [], lineIndex: 0, interval: null, paused: false, roundWpms: [] };
+  let regressionState = { text: null, lines: [], lineIndex: 0, interval: null, wpm: 250, startTime: null, wordCount: 0, questionIndex: 0, correctAnswers: 0 };
 
   // ========== UTILITY FUNCTIONS ==========
 
@@ -91,6 +93,8 @@
     'exercise-chunking': 'screen-exercise-chunking',
     'exercise-eyespan': 'screen-exercise-eyespan',
     'exercise-pacer': 'screen-exercise-pacer',
+    'exercise-fluency': 'screen-exercise-fluency',
+    'exercise-regression': 'screen-exercise-regression',
     'progress': 'screen-progress'
   };
 
@@ -98,7 +102,7 @@
   const navRouteMap = {
     'dashboard': ['dashboard'],
     'test': ['test-setup', 'test-active', 'test-questions', 'test-results'],
-    'exercises': ['exercises', 'exercise-rsvp', 'exercise-chunking', 'exercise-eyespan', 'exercise-pacer'],
+    'exercises': ['exercises', 'exercise-rsvp', 'exercise-chunking', 'exercise-eyespan', 'exercise-pacer', 'exercise-fluency', 'exercise-regression'],
     'progress': ['progress']
   };
 
@@ -152,6 +156,8 @@
     if (hash === 'progress') renderProgress();
     if (hash === 'exercise-rsvp') populateTextSelectors();
     if (hash === 'exercise-pacer') populateTextSelectors();
+    if (hash === 'exercise-fluency') initFluencySetup();
+    if (hash === 'exercise-regression') initRegressionSetup();
   }
 
   window.addEventListener('hashchange', handleRoute);
@@ -742,6 +748,16 @@
     });
   }
 
+  function populateSingleSelector(selectEl) {
+    if (!selectEl || selectEl.options.length > 0) return;
+    TEXT_LIBRARY.forEach(function (t, i) {
+      var opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = t.title + ' (' + t.content.split(/\s+/).length + ' words)';
+      selectEl.appendChild(opt);
+    });
+  }
+
   // ========== RSVP TRAINER ==========
 
   // WPM slider display
@@ -1240,6 +1256,437 @@
     $('pacer-reading-area').innerHTML = '';
   }
 
+  // ========== FLUENCY BUILDER ==========
+
+  function initFluencySetup() {
+    populateSingleSelector($('fluency-text-select'));
+    $('fluency-setup').style.display = '';
+    $('fluency-active').style.display = 'none';
+    $('fluency-summary').style.display = 'none';
+  }
+
+  $('btn-start-fluency').addEventListener('click', function () {
+    var textIndex = parseInt($('fluency-text-select').value);
+    if (isNaN(textIndex)) return;
+    fluencyState.text = TEXT_LIBRARY[textIndex];
+    fluencyState.round = 1;
+    fluencyState.roundWpms = [];
+    fluencyState.baseWpm = 0;
+    fluencyState.targetWpm = 0;
+
+    $('fluency-setup').style.display = 'none';
+    $('fluency-summary').style.display = 'none';
+    $('fluency-active').style.display = '';
+
+    startFluencyRound1();
+  });
+
+  function startFluencyRound1() {
+    fluencyState.round = 1;
+    $('fluency-round-indicator').textContent = 'Round 1 of 3 — Free Read';
+    $('fluency-stats').textContent = '';
+
+    // Show the text as a plain reading area (like test-active)
+    var readingArea = $('fluency-reading-area');
+    readingArea.textContent = fluencyState.text.content;
+
+    $('fluency-controls').style.display = 'flex';
+    $('fluency-pacer-controls').style.display = 'none';
+
+    fluencyState.startTime = performance.now();
+    fluencyState.timerInterval = setInterval(function () {
+      var elapsed = performance.now() - fluencyState.startTime;
+      var words = fluencyState.text.content.split(/\s+/).length;
+      var minutes = elapsed / 60000;
+      if (minutes > 0.05) {
+        $('fluency-stats').innerHTML = '<span>Time: <strong>' + formatTime(elapsed) + '</strong></span><span>Live WPM: <strong>' + Math.round(words / minutes) + '</strong></span>';
+      }
+    }, 1000);
+  }
+
+  $('btn-fluency-done').addEventListener('click', function () {
+    var elapsed = performance.now() - fluencyState.startTime;
+    clearInterval(fluencyState.timerInterval);
+    fluencyState.timerInterval = null;
+
+    var words = fluencyState.text.content.split(/\s+/).length;
+    var wpm = Math.round(words / (elapsed / 60000));
+    fluencyState.baseWpm = wpm;
+    fluencyState.roundWpms[0] = wpm;
+
+    // Proceed to round 2
+    startFluencyPacerRound(2, Math.round(wpm * 1.25));
+  });
+
+  $('btn-fluency-stop').addEventListener('click', function () {
+    stopFluency();
+  });
+
+  function startFluencyPacerRound(roundNum, targetWpm) {
+    fluencyState.round = roundNum;
+    fluencyState.targetWpm = targetWpm;
+
+    var label = roundNum === 2
+      ? 'Round 2 of 3 — Pacer at +25% (' + targetWpm + ' WPM)'
+      : 'Round 3 of 3 — Pacer at +50% (' + targetWpm + ' WPM)';
+    $('fluency-round-indicator').textContent = label;
+    $('fluency-stats').innerHTML = '<span>Target: <strong>' + targetWpm + ' WPM</strong></span>';
+
+    $('fluency-controls').style.display = 'none';
+    $('fluency-pacer-controls').style.display = 'flex';
+    $('btn-fluency-pause').textContent = 'Pause';
+    fluencyState.paused = false;
+
+    // Build lines
+    var allWords = fluencyState.text.content.split(/\s+/);
+    var wordsPerLine = 10;
+    fluencyState.lines = [];
+    for (var i = 0; i < allWords.length; i += wordsPerLine) {
+      fluencyState.lines.push(allWords.slice(i, i + wordsPerLine).join(' '));
+    }
+    fluencyState.lineIndex = 0;
+
+    // Render lines
+    var readingArea = $('fluency-reading-area');
+    readingArea.innerHTML = fluencyState.lines.map(function (line, idx) {
+      return '<div class="pacer-line" data-line="' + idx + '">' + esc(line) + '</div>';
+    }).join('');
+
+    startFluencyPacerAdvance(targetWpm);
+  }
+
+  function startFluencyPacerAdvance(wpm) {
+    clearInterval(fluencyState.interval);
+    fluencyState.interval = null;
+
+    if (fluencyState.lineIndex >= fluencyState.lines.length) {
+      fluencyPacerDone();
+      return;
+    }
+
+    highlightFluencyLine(fluencyState.lineIndex);
+    scheduleNextFluencyLine(wpm);
+  }
+
+  function scheduleNextFluencyLine(wpm) {
+    if (fluencyState.lineIndex >= fluencyState.lines.length) {
+      fluencyPacerDone();
+      return;
+    }
+    var wordsInLine = fluencyState.lines[fluencyState.lineIndex].split(/\s+/).length;
+    var delay = (wordsInLine / wpm) * 60000;
+
+    fluencyState.interval = setTimeout(function () {
+      if (fluencyState.paused) {
+        // If paused, re-check every 200ms
+        fluencyState.interval = setInterval(function () {
+          if (!fluencyState.paused) {
+            clearInterval(fluencyState.interval);
+            fluencyState.interval = null;
+            fluencyState.lineIndex++;
+            if (fluencyState.lineIndex >= fluencyState.lines.length) {
+              fluencyPacerDone();
+              return;
+            }
+            highlightFluencyLine(fluencyState.lineIndex);
+            scheduleNextFluencyLine(wpm);
+          }
+        }, 200);
+        return;
+      }
+
+      fluencyState.lineIndex++;
+      if (fluencyState.lineIndex >= fluencyState.lines.length) {
+        fluencyPacerDone();
+        return;
+      }
+      highlightFluencyLine(fluencyState.lineIndex);
+      scheduleNextFluencyLine(wpm);
+    }, delay);
+  }
+
+  function highlightFluencyLine(index) {
+    var readingArea = $('fluency-reading-area');
+    readingArea.querySelectorAll('.pacer-line.active').forEach(function (line) {
+      line.classList.remove('active');
+    });
+    var activeLine = readingArea.querySelector('[data-line="' + index + '"]');
+    if (activeLine) {
+      activeLine.classList.add('active');
+      activeLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  function fluencyPacerDone() {
+    var roundNum = fluencyState.round;
+    fluencyState.roundWpms[roundNum - 1] = fluencyState.targetWpm;
+    $('fluency-pacer-controls').style.display = 'none';
+
+    if (roundNum === 2) {
+      // Start round 3
+      var round3Target = Math.round(fluencyState.baseWpm * 1.5);
+      setTimeout(function () {
+        startFluencyPacerRound(3, round3Target);
+      }, 800);
+    } else {
+      // Done — show summary
+      showFluencySummary();
+    }
+  }
+
+  $('btn-fluency-pause').addEventListener('click', function () {
+    fluencyState.paused = !fluencyState.paused;
+    $('btn-fluency-pause').textContent = fluencyState.paused ? 'Resume' : 'Pause';
+  });
+
+  $('btn-fluency-stop-pacer').addEventListener('click', function () {
+    stopFluency();
+  });
+
+  function showFluencySummary() {
+    clearInterval(fluencyState.interval);
+    fluencyState.interval = null;
+    $('fluency-active').style.display = 'none';
+    $('fluency-summary').style.display = '';
+
+    var r1 = fluencyState.roundWpms[0] || 0;
+    var r2 = fluencyState.roundWpms[1] || Math.round(r1 * 1.25);
+    var r3 = fluencyState.roundWpms[2] || Math.round(r1 * 1.5);
+
+    $('fluency-summary-stats').innerHTML =
+      '<div class="fluency-round-card">' +
+        '<div class="round-label">Round 1</div>' +
+        '<div class="round-wpm">' + r1 + '</div>' +
+        '<div class="round-target">Baseline WPM</div>' +
+      '</div>' +
+      '<div class="fluency-round-card">' +
+        '<div class="round-label">Round 2</div>' +
+        '<div class="round-wpm">' + r2 + '</div>' +
+        '<div class="round-target">Target: ' + Math.round(r1 * 1.25) + ' WPM</div>' +
+      '</div>' +
+      '<div class="fluency-round-card">' +
+        '<div class="round-label">Round 3</div>' +
+        '<div class="round-wpm">' + r3 + '</div>' +
+        '<div class="round-target">Target: ' + Math.round(r1 * 1.5) + ' WPM</div>' +
+      '</div>';
+
+    saveSession({
+      type: 'fluency',
+      textTitle: fluencyState.text.title,
+      wpm: r3,
+      wordCount: fluencyState.text.content.split(/\s+/).length
+    });
+  }
+
+  $('btn-fluency-again').addEventListener('click', function () {
+    $('fluency-summary').style.display = 'none';
+    $('fluency-setup').style.display = '';
+  });
+
+  function stopFluency() {
+    clearInterval(fluencyState.timerInterval);
+    clearInterval(fluencyState.interval);
+    clearTimeout(fluencyState.interval);
+    fluencyState.timerInterval = null;
+    fluencyState.interval = null;
+    fluencyState.paused = false;
+    $('fluency-setup').style.display = '';
+    $('fluency-active').style.display = 'none';
+    $('fluency-summary').style.display = 'none';
+    $('fluency-reading-area').innerHTML = '';
+    $('fluency-stats').textContent = '';
+  }
+
+  // ========== REGRESSION BUSTER ==========
+
+  function initRegressionSetup() {
+    populateSingleSelector($('regression-text-select'));
+    $('regression-setup').style.display = '';
+    $('regression-active').style.display = 'none';
+    $('regression-questions').style.display = 'none';
+    $('regression-results').style.display = 'none';
+  }
+
+  $('regression-wpm').addEventListener('input', function () {
+    $('regression-wpm-display').textContent = this.value + ' WPM';
+  });
+
+  $('btn-start-regression').addEventListener('click', function () {
+    var textIndex = parseInt($('regression-text-select').value);
+    if (isNaN(textIndex)) return;
+    var text = TEXT_LIBRARY[textIndex];
+
+    regressionState.text = text;
+    regressionState.wpm = parseInt($('regression-wpm').value);
+    regressionState.lineIndex = 0;
+    regressionState.questionIndex = 0;
+    regressionState.correctAnswers = 0;
+    regressionState.wordCount = text.content.split(/\s+/).length;
+
+    // Build lines (~10 words each)
+    var allWords = text.content.split(/\s+/);
+    regressionState.lines = [];
+    for (var i = 0; i < allWords.length; i += 10) {
+      regressionState.lines.push(allWords.slice(i, i + 10).join(' '));
+    }
+
+    $('regression-setup').style.display = 'none';
+    $('regression-active').style.display = '';
+    $('regression-questions').style.display = 'none';
+    $('regression-results').style.display = 'none';
+    $('regression-speed-label').textContent = regressionState.wpm + ' WPM';
+
+    // Render all lines as empty placeholders first
+    var readingArea = $('regression-reading-area');
+    readingArea.innerHTML = regressionState.lines.map(function (line, idx) {
+      return '<div class="regression-line" id="regression-line-' + idx + '" data-line="' + idx + '"></div>';
+    }).join('');
+
+    regressionState.startTime = performance.now();
+    advanceRegressionLine();
+  });
+
+  function advanceRegressionLine() {
+    var idx = regressionState.lineIndex;
+    var lines = regressionState.lines;
+
+    if (idx >= lines.length) {
+      finishRegression();
+      return;
+    }
+
+    var lineEl = $('regression-line-' + idx);
+    if (!lineEl) {
+      finishRegression();
+      return;
+    }
+
+    // Show the current line
+    lineEl.textContent = lines[idx];
+    lineEl.classList.add('active');
+    lineEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    var words = lines[idx].split(/\s+/).length;
+    var delay = (words / regressionState.wpm) * 60000;
+
+    regressionState.interval = setTimeout(function () {
+      // Mask the line
+      lineEl.classList.remove('active');
+      lineEl.innerHTML = '<span class="masked-line">' + '\u2588'.repeat(Math.max(lines[idx].length, 10)) + '</span>';
+
+      regressionState.lineIndex++;
+      advanceRegressionLine();
+    }, delay);
+  }
+
+  function finishRegression() {
+    var elapsed = performance.now() - regressionState.startTime;
+    var wpm = Math.round(regressionState.wordCount / (elapsed / 60000));
+    regressionState.elapsedMs = elapsed;
+    regressionState.resultWpm = wpm;
+
+    $('regression-active').style.display = 'none';
+
+    var questions = regressionState.text.questions;
+    if (questions && questions.length > 0) {
+      regressionState.questionIndex = 0;
+      regressionState.correctAnswers = 0;
+      $('regression-questions').style.display = '';
+      renderRegressionQuestion();
+    } else {
+      showRegressionResults();
+    }
+  }
+
+  $('btn-regression-stop').addEventListener('click', function () {
+    stopRegression();
+  });
+
+  function renderRegressionQuestion() {
+    var questions = regressionState.text.questions;
+    var q = questions[regressionState.questionIndex];
+
+    $('regression-question-progress').textContent = 'Question ' + (regressionState.questionIndex + 1) + ' of ' + questions.length;
+
+    var html = '<div class="question-text">' + esc(q.question) + '</div><div class="question-options">';
+    q.options.forEach(function (opt, i) {
+      html += '<button class="question-option" data-index="' + i + '">' + esc(opt) + '</button>';
+    });
+    html += '</div>';
+    $('regression-question-card').innerHTML = html;
+
+    $('regression-question-card').querySelectorAll('.question-option').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        handleRegressionAnswer(parseInt(btn.getAttribute('data-index')));
+      });
+    });
+  }
+
+  function handleRegressionAnswer(selectedIndex) {
+    var questions = regressionState.text.questions;
+    var q = questions[regressionState.questionIndex];
+    var correctIndex = q.correct;
+    var isCorrect = selectedIndex === correctIndex;
+
+    if (isCorrect) regressionState.correctAnswers++;
+
+    var options = $('regression-question-card').querySelectorAll('.question-option');
+    options.forEach(function (btn, i) {
+      btn.classList.add('disabled');
+      if (i === correctIndex) btn.classList.add('correct');
+      else if (i === selectedIndex && !isCorrect) btn.classList.add('incorrect');
+    });
+
+    var explanationHtml = q.explanation ? '<div class="question-explanation">' + esc(q.explanation) + '</div>' : '';
+    var isLast = regressionState.questionIndex >= questions.length - 1;
+    var nextLabel = isLast ? 'See Results' : 'Next Question';
+
+    $('regression-question-card').innerHTML += explanationHtml +
+      '<div class="question-next"><button class="btn btn-primary" id="btn-regression-next">' + nextLabel + '</button></div>';
+
+    $('btn-regression-next').addEventListener('click', function () {
+      if (isLast) {
+        showRegressionResults();
+      } else {
+        regressionState.questionIndex++;
+        renderRegressionQuestion();
+      }
+    });
+  }
+
+  function showRegressionResults() {
+    $('regression-questions').style.display = 'none';
+    $('regression-results').style.display = '';
+
+    var wpm = regressionState.resultWpm;
+    var questions = regressionState.text.questions || [];
+    var comprehension = questions.length > 0 ? regressionState.correctAnswers / questions.length : 1;
+
+    $('regression-result-wpm').textContent = wpm;
+    $('regression-result-comp').textContent = Math.round(comprehension * 100) + '%';
+
+    saveSession({
+      type: 'regression',
+      textTitle: regressionState.text.title,
+      wpm: wpm,
+      comprehension: Math.round(comprehension * 100) / 100,
+      wordCount: regressionState.wordCount,
+      timeMs: Math.round(regressionState.elapsedMs || 0),
+      correctAnswers: regressionState.correctAnswers,
+      totalQuestions: questions.length
+    });
+  }
+
+  function stopRegression() {
+    clearTimeout(regressionState.interval);
+    regressionState.interval = null;
+    $('regression-setup').style.display = '';
+    $('regression-active').style.display = 'none';
+    $('regression-questions').style.display = 'none';
+    $('regression-results').style.display = 'none';
+    $('regression-reading-area').innerHTML = '';
+  }
+
   // ========== STOP ALL EXERCISES ==========
 
   function stopAllExercises() {
@@ -1260,6 +1707,12 @@
 
     // Stop Pacer
     if (pacerState.interval) stopPacer();
+
+    // Stop Fluency Builder
+    if (fluencyState.timerInterval || fluencyState.interval) stopFluency();
+
+    // Stop Regression Buster
+    if (regressionState.interval) stopRegression();
   }
 
   // ========== PROGRESS SCREEN ==========

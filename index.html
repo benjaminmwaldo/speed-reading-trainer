@@ -166,6 +166,16 @@
         <h3>Pacer Reading</h3>
         <p>Read along with a moving highlight bar at your target WPM pace.</p>
       </div>
+      <div class="exercise-card" onclick="navigateTo('exercise-fluency')">
+        <div class="exercise-icon">&#128257;</div>
+        <h3>Fluency Builder</h3>
+        <p>Re-read the same passage three times at escalating speeds to build reading automaticity.</p>
+      </div>
+      <div class="exercise-card" onclick="navigateTo('exercise-regression')">
+        <div class="exercise-icon">&#128683;</div>
+        <h3>Regression Buster</h3>
+        <p>Lines mask after their time window — no re-reading allowed. Break the backtracking habit.</p>
+      </div>
     </div>
   </section>
 
@@ -279,6 +289,91 @@
       <div class="pacer-controls">
         <button class="btn btn-secondary" id="btn-pacer-pause">Pause</button>
         <button class="btn btn-danger" id="btn-pacer-stop">Stop</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== FLUENCY BUILDER EXERCISE ========== -->
+  <section id="screen-exercise-fluency" class="screen" style="display:none">
+    <div class="exercise-header">
+      <button class="btn btn-ghost" onclick="navigateTo('exercises')">&larr; Exercises</button>
+      <h2>Fluency Builder</h2>
+    </div>
+    <div class="fluency-setup" id="fluency-setup">
+      <p class="exercise-desc">Read the same passage three times at escalating pace. Round 1 is free-paced. Rounds 2 and 3 use the Pacer at +25% and +50% of your baseline WPM.</p>
+      <div class="form-group">
+        <label class="form-label">Text</label>
+        <select id="fluency-text-select" class="form-select"></select>
+      </div>
+      <button class="btn btn-primary btn-lg" id="btn-start-fluency">Begin Round 1</button>
+    </div>
+    <div class="fluency-active" id="fluency-active" style="display:none">
+      <div class="fluency-round-indicator" id="fluency-round-indicator">Round 1 of 3 — Free Read</div>
+      <div class="fluency-stats" id="fluency-stats"></div>
+      <div class="fluency-reading-area" id="fluency-reading-area"></div>
+      <div class="fluency-controls" id="fluency-controls">
+        <button class="btn btn-primary btn-lg" id="btn-fluency-done">Done Reading</button>
+        <button class="btn btn-danger" id="btn-fluency-stop">Stop</button>
+      </div>
+      <div class="fluency-pacer-controls" id="fluency-pacer-controls" style="display:none">
+        <button class="btn btn-secondary" id="btn-fluency-pause">Pause</button>
+        <button class="btn btn-danger" id="btn-fluency-stop-pacer">Stop</button>
+      </div>
+    </div>
+    <div class="fluency-summary" id="fluency-summary" style="display:none">
+      <h3 style="margin-bottom:20px;">Session Complete</h3>
+      <div class="fluency-summary-stats" id="fluency-summary-stats"></div>
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:24px;">
+        <button class="btn btn-primary" id="btn-fluency-again">Go Again</button>
+        <button class="btn btn-secondary" onclick="navigateTo('exercises')">Back to Exercises</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== REGRESSION BUSTER EXERCISE ========== -->
+  <section id="screen-exercise-regression" class="screen" style="display:none">
+    <div class="exercise-header">
+      <button class="btn btn-ghost" onclick="navigateTo('exercises')">&larr; Exercises</button>
+      <h2>Regression Buster</h2>
+    </div>
+    <div class="regression-setup" id="regression-setup">
+      <p class="exercise-desc">Each line of text disappears after its time window. You cannot re-read masked lines. A comprehension quiz follows.</p>
+      <div class="form-group">
+        <label class="form-label">Reading Speed</label>
+        <input type="range" id="regression-wpm" min="100" max="800" value="250" step="25" class="range-input">
+        <span id="regression-wpm-display" class="range-value">250 WPM</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Text</label>
+        <select id="regression-text-select" class="form-select"></select>
+      </div>
+      <button class="btn btn-primary btn-lg" id="btn-start-regression">Start</button>
+    </div>
+    <div class="regression-active" id="regression-active" style="display:none">
+      <div class="regression-speed-label" id="regression-speed-label">250 WPM</div>
+      <div class="regression-reading-area" id="regression-reading-area"></div>
+      <button class="btn btn-danger" id="btn-regression-stop" style="margin-top:16px;display:block;margin-left:auto;margin-right:auto;">Stop</button>
+    </div>
+    <div class="regression-questions" id="regression-questions" style="display:none">
+      <h2 class="section-title">Comprehension Check</h2>
+      <div class="question-progress" id="regression-question-progress"></div>
+      <div class="question-card" id="regression-question-card"></div>
+    </div>
+    <div class="regression-results" id="regression-results" style="display:none">
+      <h2 class="section-title">Results</h2>
+      <div class="results-grid">
+        <div class="result-card result-wpm">
+          <div class="result-value" id="regression-result-wpm">0</div>
+          <div class="result-label">Words Per Minute</div>
+        </div>
+        <div class="result-card result-comp">
+          <div class="result-value" id="regression-result-comp">0%</div>
+          <div class="result-label">Comprehension</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:24px;">
+        <button class="btn btn-primary" onclick="navigateTo('exercise-regression')">Try Again</button>
+        <button class="btn btn-secondary" onclick="navigateTo('exercises')">Back to Exercises</button>
       </div>
     </div>
   </section>
